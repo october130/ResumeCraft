@@ -50,10 +50,9 @@ public class JwTUtils {
 
         return Jwts.builder()
                 .subject(String.valueOf(userId))       // subject存用户ID
-                .claim("username", username)            // 自定义claim存用户名
                 .issuedAt(now)                          // 签发时间
                 .expiration(expireDate)                 // 过期时间
-                .signWith(getSigningKey())              // 签名
+                .signWith(getSigningKey())              // 签名（HS256）
                 .compact();
     }
 

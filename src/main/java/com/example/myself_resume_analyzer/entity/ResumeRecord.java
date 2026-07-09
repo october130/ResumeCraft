@@ -17,6 +17,13 @@ public class ResumeRecord {
 
     private String fileName;
 
+    // 新增字段
+    private Long fileSize;      // 文件大小（字节）
+
+    private String fileType;    // 文件类型（pdf/docx）
+
+    private Integer parseStatus;  // 解析状态（0-待解析，1-解析中，2-已完成，3-解析失败）
+
     private String resumeText;
 
     private Integer scoreContent;

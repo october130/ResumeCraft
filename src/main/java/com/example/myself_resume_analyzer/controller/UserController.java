@@ -32,12 +32,14 @@ public class UserController {
     @PostMapping("/register")
     @Operation(summary = "用户注册")
     public Result<LoginVO> register(@RequestBody RegisterRequestDTO registerRequest) {
+        log.info("用户注册：{}", registerRequest);
         return userService.register(registerRequest);
     }
 
     @PostMapping("/login")
     @Operation(summary = "用户登录")
     public Result<LoginVO> login(@RequestBody LoginRequestDTO loginRequest) {
+        log.info("用户登录：{}", loginRequest);
         return userService.login(loginRequest);
     }
 
@@ -65,6 +67,6 @@ public class UserController {
                 TimeUnit.MINUTES
         );
         log.info("短信验证码发送成功：{}",code );
-        return Result.success("验证码发送成功", null);
+        return Result.success("验证码:",code);
     }
 }
