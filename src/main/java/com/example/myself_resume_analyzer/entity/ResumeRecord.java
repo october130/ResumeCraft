@@ -42,4 +42,7 @@ public class ResumeRecord {
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
+
+    private  String parseResult;//AI面试简历解析结果，解析为JSON字符串
+    private  String fileMd5;//文件md5,用来判断文件是否重复上传
 }

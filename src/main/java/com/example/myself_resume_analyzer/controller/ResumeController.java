@@ -13,6 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+
 @RestController
 @RequestMapping("/api/resume")
 @Slf4j
@@ -27,7 +29,7 @@ public class ResumeController {
     public Result<ResumeVO> upload(
             @RequestParam("file") MultipartFile file,
             HttpServletRequest  request
-    ){
+    ) throws IOException {
 
     String token = request.getHeader("Authorization").substring(7);//获取token，
     Long userId = jwTUtils.getUserIdFromToken(token);//用来通过token得到userId
@@ -54,6 +56,16 @@ public Result<String> delete(@PathVariable Long id,HttpServletRequest  request){
     String token = request.getHeader("Authorization").substring(7);//获取token，
     Long userId = jwTUtils.getUserIdFromToken(token);//用来通过token得到userId
     return resumeService.list(pageNum,pageSize,userId);
+}
+
+@GetMapping("/{id}")
+    @Operation(summary = "获取简历详情")
+  public Result<ResumeVO> get (
+          @PathVariable Long id,
+          HttpServletRequest request
+)  {
+      Long userId = (Long)request.getAttribute("userId");
+      return resumeService.getDetail(id,userId);
 }
 
 }

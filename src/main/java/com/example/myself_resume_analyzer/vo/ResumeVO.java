@@ -26,4 +26,7 @@ public class ResumeVO {
     private Integer parseStatus;     // 解析状态（0-待解析 1-已完成 2-失败）
 
     private LocalDateTime uploadTime; // 上传时间
+
+    private  String resumeText;//提取的简历文本
+    private String parseResult;//AI简历分析后的结果
 }
