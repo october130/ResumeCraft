@@ -26,23 +26,9 @@ public class ResumeRecord {
 
     private String resumeText;
 
-    private Integer scoreContent;
-
-    private Integer scoreMatch;
-
-    private Integer scoreSkill;
-
-    private Integer scoreLayout;
-
-    private Integer scoreHighlight;
-
-    private String suggestion;
-
     private String targetJd;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
-
-    private  String parseResult;//AI面试简历解析结果，解析为JSON字符串
     private  String fileMd5;//文件md5,用来判断文件是否重复上传
 }

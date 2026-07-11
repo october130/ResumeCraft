@@ -5,13 +5,18 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.myself_resume_analyzer.common.Result;
 import com.example.myself_resume_analyzer.constant.ErrorMessages;
+import com.example.myself_resume_analyzer.entity.ResumeEvaluation;
 import com.example.myself_resume_analyzer.entity.ResumeRecord;
+import com.example.myself_resume_analyzer.mapper.ResumeEvaluationMapper;
 import com.example.myself_resume_analyzer.mapper.ResumeRecordMapper;
 import com.example.myself_resume_analyzer.service.FileStorageService;
 import com.example.myself_resume_analyzer.service.ResumeAsyncService;
 import com.example.myself_resume_analyzer.service.ResumeService;
 import com.example.myself_resume_analyzer.utils.Md5Utils;
+import com.example.myself_resume_analyzer.vo.ResumeDetailVO;
+import com.example.myself_resume_analyzer.vo.ResumeEvaluationVO;
 import com.example.myself_resume_analyzer.vo.ResumeVO;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -19,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -32,6 +38,10 @@ public class ResumeServiceImpl implements ResumeService {
     private ResumeAsyncService resumeParseAsyncService;
     @Resource
     private RedisTemplate redisTemplate;
+    @Resource
+    private ResumeEvaluationMapper resumeEvaluationMapper;
+    @Resource
+    private ObjectMapper objectMapper;
     @Override
     public Result<ResumeVO> upload(MultipartFile file, Long userId) throws IOException {
         // 1. 校验文件
@@ -117,10 +127,18 @@ log.info("数据库里已经有用户的信息了，包括OSS");
                 .fileType(record.getFileType())
                 .parseStatus(record.getParseStatus())
                 .uploadTime(record.getCreateTime())
+                .latestScore(getLatestScore(record.getId()))
                 .build());//将分页查询得来的数据通过封装后的ResumeVO类进行返回
 
                 return Result.success(voPage);
     }
+    private Integer getLatestScore(Long resumeId) {//获取最新评分
+        QueryWrapper<ResumeEvaluation> wrapper = new QueryWrapper<>();
+        wrapper.eq("resume_id", resumeId).orderByDesc("analyzed_at").last("LIMIT 1");
+        ResumeEvaluation eval = resumeEvaluationMapper.selectOne(wrapper);
+        return eval != null ? eval.getOverallScore() : null;
+    }
+
 
     @Override
     public Result<String> delete(Long id, Long userId) {
@@ -145,23 +163,30 @@ log.info("数据库里已经有用户的信息了，包括OSS");
     }
 
     @Override
-    public Result<ResumeVO> getDetail(Long id, Long userId) {
-        // 缓存 key 包含 userId，天然隔离不同用户
+    public Result<ResumeDetailVO> getDetail(Long id, Long userId) {
         String key = "resume:detail:" + userId + ":" + id;
-        ResumeVO cacheVO = (ResumeVO) redisTemplate.opsForValue().get(key);
-        if (cacheVO != null) {
+        ResumeDetailVO cached = (ResumeDetailVO) redisTemplate.opsForValue().get(key);
+        if (cached != null) {
             log.info("缓存命中: {}", key);
-            return Result.success(cacheVO);
+            return Result.success(cached);
         }
 
+        // 1. 查询简历基础信息
         ResumeRecord record = resumeRecordMapper.selectById(id);
-        if (record == null){
-          return Result.error(ErrorMessages.RESUME_NOT_EXIST);
+        if (record == null) {
+            return Result.error(ErrorMessages.RESUME_NOT_EXIST);
         }
-        if (!record.getUserId().equals(userId)){
+        if (!record.getUserId().equals(userId)) {
             return Result.error("无权查看");
         }
-       ResumeVO vo = ResumeVO.builder()
+
+        // 2. 查询评分列表
+        QueryWrapper<ResumeEvaluation> evalWrapper = new QueryWrapper<>();
+        evalWrapper.eq("resume_id", id).orderByDesc("analyzed_at");
+        List<ResumeEvaluation> evaluations = resumeEvaluationMapper.selectList(evalWrapper);
+
+        // 3. 转换为 ResumeVO
+        ResumeVO resumeVO = ResumeVO.builder()
                 .resumeId(record.getId())
                 .fileName(record.getFileName())
                 .fileUrl(record.getFileUrl())
@@ -170,11 +195,59 @@ log.info("数据库里已经有用户的信息了，包括OSS");
                 .parseStatus(record.getParseStatus())
                 .uploadTime(record.getCreateTime())
                 .resumeText(record.getResumeText())
-                .parseResult(record.getParseResult())
                 .build();
-        redisTemplate.opsForValue().set(key, vo, 24, TimeUnit.HOURS);
-        log.info("redis缓存已经存入: {}", key);
-                return Result.success(vo);
+
+        // 4. 转换评分列表为 VO（扁平结构，直接映射）
+        List<ResumeEvaluationVO> evalVOList = evaluations.stream()
+                .map(e -> ResumeEvaluationVO.builder()
+                        .evaluationId(e.getId())
+                        .overallScore(e.getOverallScore())
+                        .contentScore(e.getContentScore())
+                        .structureScore(e.getStructureScore())
+                        .skillMatchScore(e.getSkillMatchScore())
+                        .expressionScore(e.getExpressionScore())
+                        .projectScore(e.getProjectScore())
+                        .summary(e.getSummary())
+                        .strengths(parseJsonToList(e.getStrengthsJson()))
+                        .suggestions(parseJsonToSuggestionList(e.getSuggestionsJson()))
+                        .analyzedAt(e.getAnalyzedAt())
+                        .build())
+                .toList();
+
+        // 5. 组合返回
+        ResumeDetailVO detailVO = ResumeDetailVO.builder()
+                .resumeInfo(resumeVO)
+                .evaluations(evalVOList)
+                .build();
+
+        redisTemplate.opsForValue().set(key, detailVO, 24, TimeUnit.HOURS);
+        log.info("缓存已存入: {}", key);
+
+        return Result.success(detailVO);
+    }
+
+    // 解析 JSON 为 List<String>
+    private List<String> parseJsonToList(String json) {
+        if (json == null || json.isEmpty()) return List.of();
+        try {
+            return objectMapper.readValue(json, objectMapper.getTypeFactory()
+                    .constructCollectionType(List.class, String.class));
+        } catch (Exception e) {
+            log.error("解析 JSON 失败: {}", json, e);
+            return List.of();
+        }
+    }
+
+    // 解析 JSON 为 List<SuggestionVO>
+    private List<ResumeEvaluationVO.SuggestionVO> parseJsonToSuggestionList(String json) {
+        if (json == null || json.isEmpty()) return List.of();
+        try {
+            return objectMapper.readValue(json, objectMapper.getTypeFactory()
+                    .constructCollectionType(List.class, ResumeEvaluationVO.SuggestionVO.class));
+        } catch (Exception e) {
+            log.error("解析 JSON 失败: {}", json, e);
+            return List.of();
+        }
     }
 
 

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.example.myself_resume_analyzer.common.Result;
 import com.example.myself_resume_analyzer.service.ResumeService;
 import com.example.myself_resume_analyzer.utils.JwTUtils;
+import com.example.myself_resume_analyzer.vo.ResumeDetailVO;
 import com.example.myself_resume_analyzer.vo.ResumeVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -60,7 +61,7 @@ public Result<String> delete(@PathVariable Long id,HttpServletRequest  request){
 
 @GetMapping("/{id}")
     @Operation(summary = "获取简历详情")
-  public Result<ResumeVO> get (
+  public Result<ResumeDetailVO> get (
           @PathVariable Long id,
           HttpServletRequest request
 )  {

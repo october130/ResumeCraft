@@ -28,5 +28,9 @@ public class ResumeVO {
     private LocalDateTime uploadTime; // 上传时间
 
     private  String resumeText;//提取的简历文本
-    private String parseResult;//AI简历分析后的结果
+
+    /**
+     * 最新评分（来自 resume_evaluation 表，列表页显示）
+     */
+    private Integer latestScore;
 }

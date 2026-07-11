@@ -67,6 +67,6 @@ public class UserController {
                 TimeUnit.MINUTES
         );
         log.info("短信验证码发送成功：{}",code );
-        return Result.success("验证码:",code);
+        return Result.success("验证码已经发送");
     }
 }
