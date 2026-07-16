@@ -2,6 +2,7 @@ package com.example.myself_resume_analyzer.resume.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.example.myself_resume_analyzer.common.Result.Result;
+import com.example.myself_resume_analyzer.common.annotation.RateLimit;
 import com.example.myself_resume_analyzer.resume.service.ResumeService;
 import com.example.myself_resume_analyzer.common.utils.JwTUtils;
 import com.example.myself_resume_analyzer.resume.vo.ResumeDetailVO;
@@ -31,6 +32,7 @@ public class ResumeController {
     private JwTUtils jwTUtils;
 @PostMapping("/upload")
 @Operation(summary = "上传简历")
+@RateLimit(key = "resume:upload",limit = 5,time = 1)
     public Result<ResumeVO> upload(
             @RequestParam("file") MultipartFile file,
             HttpServletRequest  request
@@ -74,6 +76,7 @@ public Result<String> delete(@PathVariable Long id,HttpServletRequest  request){
 }
 @PostMapping("/{id}/reanalyze")
     @Operation(summary = "重新分析简历")
+@RateLimit(key = "resume:reanalyze",limit = 5,time = 1)
     public Result<String> reanalyze(
             @PathVariable("id") Long resumeId,
             HttpServletRequest request
