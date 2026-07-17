@@ -1,11 +1,6 @@
 package com.example.myself_resume_analyzer.interview.service.impl;
 
-import com.alibaba.dashscope.aigc.generation.Generation;
-import com.alibaba.dashscope.aigc.generation.GenerationParam;
-import com.alibaba.dashscope.aigc.generation.GenerationResult;
-import com.alibaba.dashscope.common.Message;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.example.myself_resume_analyzer.common.config.DashScopeConfig;
 import com.example.myself_resume_analyzer.interview.entity.Answer;
 import com.example.myself_resume_analyzer.interview.entity.Session;
 import com.example.myself_resume_analyzer.interview.mapper.AnswerMapper;
@@ -15,6 +10,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -26,10 +23,13 @@ public class InterviewAsyncServiceImpl implements InterviewAsyncService {
 
     @Resource
     private SessionMapper interviewSessionMapper;
+
     @Resource
     private AnswerMapper answerMapper;
+
     @Resource
-    private DashScopeConfig dashScopeConfig;
+    private ChatModel chatModel;
+
     @Resource
     private ObjectMapper objectMapper;
 
@@ -79,20 +79,13 @@ public class InterviewAsyncServiceImpl implements InterviewAsyncService {
                     .replace("{difficulty}", session.getDifficulty())
                     .replace("{questionsWithAnswers}", sb.toString());
 
-            // 5. 调 AI
-            Message systemMsg = Message.builder().role("system").content(systemPrompt).build();
-            Message userMsg = Message.builder().role("user").content(userPrompt).build();
-
-            Generation gen = new Generation();
-            GenerationResult result = gen.call(
-                    GenerationParam.builder()
-                            .apiKey(dashScopeConfig.getApiKey())
-                            .model("qwen-plus")
-                            .messages(List.of(systemMsg, userMsg))
-                            .resultFormat(GenerationParam.ResultFormat.MESSAGE)
-                            .build()
-            );
-            String aiAnswer = result.getOutput().getChoices().get(0).getMessage().getContent();
+            // 5. 调用 AI（Spring AI 方式）
+            ChatClient chatClient = ChatClient.create(chatModel);
+            String aiAnswer = chatClient.prompt()
+                    .system(systemPrompt)
+                    .user(userPrompt)
+                    .call()
+                    .content();
 
             if (aiAnswer == null) {
                 throw new RuntimeException("AI评估返回为空");

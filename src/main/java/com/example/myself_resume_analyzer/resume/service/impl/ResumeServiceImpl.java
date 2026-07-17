@@ -168,10 +168,16 @@ log.info("数据库里已经有用户的信息了，包括OSS");
     @Override
     public Result<ResumeDetailVO> getDetail(Long id, Long userId) {
         String key = "resume:detail:" + userId + ":" + id;
-        ResumeDetailVO cached = (ResumeDetailVO) redisTemplate.opsForValue().get(key);
-        if (cached != null) {
-            log.info("缓存命中: {}", key);
-            return Result.success(cached);
+        // 尝试读取缓存，反序列化失败则忽略（缓存格式可能不一致）
+        try {
+            ResumeDetailVO cached = (ResumeDetailVO) redisTemplate.opsForValue().get(key);
+            if (cached != null) {
+                log.info("缓存命中: {}", key);
+                return Result.success(cached);
+            }
+        } catch (Exception e) {
+            log.warn("缓存读取失败，从数据库查询: {}", e.getMessage());
+            redisTemplate.delete(key);
         }
 
         // 1. 查询简历基础信息

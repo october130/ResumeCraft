@@ -1,0 +1,31 @@
+请生成共 {questionCount} 道面试题目，参考知识库中的面试题题库。
+
+## 技术方向
+{skillId}
+
+## 难度级别
+{difficulty}
+
+## 参考题库（来自知识库）
+{questionsContext}
+
+## 候选人简历
+---
+{resumeText}
+---
+
+## 输出要求
+返回 JSON 格式：
+
+{
+  "questions": [
+    {
+      "question": "题目内容",
+      "category": "基础/框架/项目/算法"
+    }
+  ]
+}
+
+- questions 数组必须包含恰好 {questionCount} 个元素
+- 每道题必须填写 category 字段
+- 题目应覆盖不同类别，难度符合指定级别

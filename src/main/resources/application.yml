@@ -1,0 +1,49 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: Myself_resume_analyzer
+  datasource:
+    url: jdbc:mysql://localhost:3306/resume_analyzer?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    username: root
+    password: ${DB_PASSWORD:your-db-password}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 3
+
+  ai:
+    dashscope:
+      api-key: ${DASHSCOPE_API_KEY:your-dashscope-api-key}
+      chat:
+        options:
+          model: qwen-plus
+          temperature: 0.7
+      embedding:
+        options:
+          model: text-embedding-v3
+
+# JWT配置
+jwt:
+  # 签名密钥，32字节（256位），使用HS256算法（token更短）
+  # 生产环境通过环境变量 JWT_SECRET 注入，开发环境使用默认值
+  secret: ${JWT_SECRET:your-jwt-secret}
+  # token有效期，单位：毫秒，这里设置24小时（24 * 60 * 60 * 1000 = 86400000）
+  expiration: 86400000
+
+mybatis-plus:
+  mapper-locations: classpath:/mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+aliyun:
+  oss:
+    endpoint: oss-cn-beijing.aliyuncs.com
+    access-key-id: ${ALIYUN_ACCESS_KEY_ID:your-aliyun-access-key-id}
+    access-key-secret: ${ALIYUN_ACCESS_KEY_SECRET:your-aliyun-access-key-secret}
+    bucket-name: merlin-java

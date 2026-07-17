@@ -1,0 +1,31 @@
+请对以下面试的所有回答进行评估。
+
+技术方向：{skillId}
+难度级别：{difficulty}
+
+{questionsWithAnswers}
+
+返回严格的JSON格式（不要包含markdown代码块标记）：
+{
+  "scores": [
+    {
+      "questionIndex": 0,
+      "score": 75,
+      "feedback": "对xxx的理解准确，但在xxx方面缺乏深度...",
+      "referenceAnswer": "该题的标准答案要点..."
+    }
+  ],
+  "overallScore": 78,
+  "overallFeedback": "该候选人在xxx方面表现扎实，但在xxx方面有待提升...",
+  "strengths": ["优势1", "优势2", "优势3"],
+  "improvements": ["建议1", "建议2", "建议3"]
+}
+
+要求：
+- scores 数组长度等于题目数量，questionIndex 从 0 开始
+- score 为 0-100 的整数
+- feedback 针对该题具体回答，指出优点和不足
+- referenceAnswer 给出简明标准答案
+- overallScore 为 0-100 的整数
+- overallFeedback 控制在200字以内，突出核心亮点和主要不足
+- strengths 和 improvements 各 3-5 条

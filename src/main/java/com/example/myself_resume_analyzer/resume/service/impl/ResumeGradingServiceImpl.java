@@ -1,17 +1,15 @@
 package com.example.myself_resume_analyzer.resume.service.impl;
 
-import com.alibaba.dashscope.aigc.generation.Generation;
-import com.alibaba.dashscope.aigc.generation.GenerationParam;
-import com.alibaba.dashscope.aigc.generation.GenerationResult;
-import com.alibaba.dashscope.common.Message;
-import com.alibaba.dashscope.common.Role;
-import com.example.myself_resume_analyzer.common.config.DashScopeConfig;
+import com.example.myself_resume_analyzer.common.service.KnowledgeBaseService;
 import com.example.myself_resume_analyzer.resume.service.ResumeGradingService;
 import com.example.myself_resume_analyzer.resume.vo.ResumeEvaluationVO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.document.Document;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -20,24 +18,27 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 简历评分服务实现（参考原项目 ResumeGradingService）
+ * 简历评分服务实现（Spring AI + RAG 版本）
  */
 @Service
 @Slf4j
 public class ResumeGradingServiceImpl implements ResumeGradingService {
 
     @Resource
-    private DashScopeConfig dashScopeConfig;
+    private ChatModel chatModel;
 
     @Resource
     private ObjectMapper objectMapper;
+
+    @Resource
+    private KnowledgeBaseService knowledgeBaseService;
 
     @Override
     public ResumeEvaluationVO analyzeResume(String resumeText) {
         log.info("开始分析简历，文本长度: {} 字符", resumeText.length());
 
         try {
-            // 1. 调用 AI 获取评分 JSON
+            // 1. 调用 AI 获取评分 JSON（带 RAG 检索）
             String json = callAI(resumeText);
             log.trace("AI 返回结果: {}", json);
 
@@ -55,56 +56,45 @@ public class ResumeGradingServiceImpl implements ResumeGradingService {
     }
 
     /**
-     * 调用 AI 进行简历评分
+     * 调用 AI 进行简历评分（Spring AI + RAG 版本）
      */
     private String callAI(String resumeText) throws Exception {
-        // 1. 读取 system prompt
+        // 1. RAG 检索：根据简历内容检索相关 JD
+        List<Document> jdDocs = knowledgeBaseService.searchJdBySkill("java-backend", 2);
+        StringBuilder jdContext = new StringBuilder();
+        for (Document doc : jdDocs) {
+            jdContext.append(doc.getText()).append("\n\n");
+        }
+        log.info("RAG 检索到 {} 个 JD 文档", jdDocs.size());
+
+        // 2. 读取 system prompt
         String systemPrompt = new String(
                 getClass().getResourceAsStream("/prompts/resume_grading_system.txt").readAllBytes(),
                 StandardCharsets.UTF_8
         );
 
-        // 2. 读取 user prompt 模板，替换占位符
+        // 3. 读取 user prompt 模板，替换占位符
         String userPromptTemplate = new String(
                 getClass().getResourceAsStream("/prompts/resume_grading_user.txt").readAllBytes(),
                 StandardCharsets.UTF_8
         );
-        String userPrompt = userPromptTemplate.replace("{resumeText}", resumeText);
+        String userPrompt = userPromptTemplate
+                .replace("{resumeText}", resumeText)
+                .replace("{jdContext}", jdContext.toString());
 
-        // 3. 构造消息
-        Message systemMsg = Message.builder()
-                .role(Role.SYSTEM.getValue())
-                .content(systemPrompt)
-                .build();
-
-        Message userMsg = Message.builder()
-                .role(Role.USER.getValue())
-                .content(userPrompt)
-                .build();
-
-        // 4. 调用 AI
-        Generation gen = new Generation();
-        GenerationResult result = gen.call(
-                GenerationParam.builder()
-                        .apiKey(dashScopeConfig.getApiKey())
-                        .model("qwen-plus")
-                        .messages(List.of(systemMsg, userMsg))
-                        .resultFormat(GenerationParam.ResultFormat.MESSAGE)
-                        .build()
-        );
-
-        // 5. 获取结果
-        String aiAnswer = result.getOutput()
-                .getChoices()
-                .get(0)
-                .getMessage()
-                .getContent();
+        // 4. 调用 AI（Spring AI 方式）
+        ChatClient chatClient = ChatClient.create(chatModel);
+        String aiAnswer = chatClient.prompt()
+                .system(systemPrompt)
+                .user(userPrompt)
+                .call()
+                .content();
 
         if (aiAnswer == null) {
-            throw new RuntimeException("AI评分失败: " + result.getOutput());
+            throw new RuntimeException("AI评分失败");
         }
 
-        log.info("AI评分调用成功");
+        log.info("AI评分调用成功（含 RAG 检索）");
         return aiAnswer;
     }
 
