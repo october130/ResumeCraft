@@ -23,10 +23,8 @@ public class AuthInterceptor implements HandlerInterceptor {
 
         // 检查是否有 Authorization 头，且以 "Bearer " 开头
         if (authorization == null || !authorization.startsWith("Bearer ")) {
-         sendUnauthorizedResponse(response, "未登录或token已过期");
-//            return false;
-
-
+            sendUnauthorizedResponse(response, "未登录或token已过期");
+            return false;
         }
 
         // 截取 token（去掉 "Bearer " 前缀，7个字符）
