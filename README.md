@@ -155,15 +155,6 @@ ChatResponse response = chatModel.call(new Prompt(prompt));
 
 **方案**：引入 Redis Stream 消息队列，替代 `@Async` 内存异步，实现任务持久化 + 多实例竞争消费。
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  SessionServiceImpl → EvaluationProducer → Redis Stream      │
-│                                              ↓               │
-│                              EvaluationConsumer（监听）        │
-│                                              ↓               │
-│                              InterviewAsyncService.evaluateAsync()
-└─────────────────────────────────────────────────────────────
-```
 
 **核心代码**：
 
