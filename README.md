@@ -362,8 +362,6 @@ resumeService.parseResumeAsync(resumeId);
 
 ## 项目截图
 
-> 待补充（启动项目后截图）
-
 | 功能 | 截图 |
 |-----|------|
 | 登录页 | ![登录页](docs/screenshots/login.png) |
@@ -373,7 +371,6 @@ resumeService.parseResumeAsync(resumeId);
 | 创建面试 | ![创建面试](docs/screenshots/interview-create.png) |
 | 面试答题 | ![面试答题](docs/screenshots/interview-session.png) |
 | 面试报告 | ![面试报告](docs/screenshots/interview-report.png) |
-| 数据分析 | ![数据分析](docs/screenshots/analytics.png) |
 
 ---
 
